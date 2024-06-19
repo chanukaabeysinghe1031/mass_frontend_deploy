@@ -10,7 +10,7 @@ import { generateImage, saveUrlToSupabase, uploadImageToCloudinary } from '@/com
 import useSupabaseClient from "@/lib/supabase/client";
 import { usePathname } from 'next/navigation'
 
-const BASE_URL = "https://a9f0-3-77-193-98.ngrok-free.app";
+const BASE_URL = "http://127.0.0.1:8000";
 
 export default function Create({user}) {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
