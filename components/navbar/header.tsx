@@ -11,7 +11,7 @@ const Header = async () => {
             <nav className='container mx-auto flex justify-between items-center h-20 px-4'>
                 <div>
                     <Link href='/public' className='text-gray-800 dark:text-white text-2xl font-semibold'>
-                        TimNirmal
+                        MAS Fashion
                     </Link>
                 </div>
                 <div className='flex-1 flex justify-center'>
@@ -40,9 +40,9 @@ const Header = async () => {
                         )}
                         {data.session && (
                             <>
-                                <Link href='/dashboard'
+                                <Link href='/create'
                                       className='text-gray-800 dark:text-white hover:text-green-500 dark:hover:text-green-500'>
-                                    Dashboard
+                                    Create
                                 </Link>
                             </>
                         )}

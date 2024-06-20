@@ -1,8 +1,13 @@
-'use client';
-
 import React, {useEffect, useState} from 'react';
 import useSupabaseClient from "@/lib/supabase/client";
 import Chatbot from '@/components/chatbot/Chatbot'; // Import the Chatbot component
+
+interface Dimensions {
+    width: number;
+    height: number;
+    linkDimensions: boolean;
+}
+
 
 interface ToolbarProps {
     mode: string;
@@ -17,8 +22,8 @@ interface ToolbarProps {
     tool: string;
     setTool: React.Dispatch<React.SetStateAction<string>>;
     sessionID: string;
-    dimensions: any;
-    setDimensions: React.Dispatch<React.SetStateAction<any>>;
+    dimensions: Dimensions;
+    setDimensions: React.Dispatch<React.SetStateAction<Dimensions>>;
     user: any;
     selectedModel: string;
     setImageUrl: React.Dispatch<React.SetStateAction<any>>;
@@ -130,7 +135,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
     const handleWidthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newWidth = Number(e.target.value);
-        setDimensions(prev => {
+        setDimensions((prev: Dimensions) => {
             const newHeight = prev.linkDimensions ? (newWidth / prev.width) * prev.height : prev.height;
             return {...prev, width: newWidth, height: newHeight};
         });
@@ -138,14 +143,14 @@ const Toolbar: React.FC<ToolbarProps> = ({
 
     const handleHeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newHeight = Number(e.target.value);
-        setDimensions(prev => {
+        setDimensions((prev: Dimensions) => {
             const newWidth = prev.linkDimensions ? (newHeight / prev.height) * prev.width : prev.width;
             return {...prev, height: newHeight, width: newWidth};
         });
     };
 
     const toggleLinkDimensions = () => {
-        setDimensions(prev => ({...prev, linkDimensions: !prev.linkDimensions}));
+        setDimensions((prev: Dimensions) => ({...prev, linkDimensions: !prev.linkDimensions}));
     };
 
     const openModal = (message: any, imageType: string) => {

@@ -5,7 +5,7 @@ import {useState} from 'react';
 import {useRouter} from 'next/navigation';
 import getSupabaseBrowserClient from '@/lib/supabase/client';
 
-const ProfileDropdown = ({session}) => {
+const ProfileDropdown = ({session}: { session: any }) => {
     const router = useRouter();
     const [isDropdownOpen, setDropdownOpen] = useState(false);
     const supabase = getSupabaseBrowserClient();

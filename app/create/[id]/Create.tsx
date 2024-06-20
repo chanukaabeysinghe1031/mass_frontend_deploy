@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import {useEffect, useRef, useState} from 'react';
 
 import NavBar from '@/components/navbar/NavBar';
 import Toolbar from '@/components/toolbar/Toolbar';
 import InputSection from '@/components/input_section/InputSection';
 import DrawingCanvas from '@/components/toolbar/DrawingContext';
-import { generateImage, saveUrlToSupabase, uploadImageToCloudinary } from '@/components/apis/Apis';
+import {generateImage, saveUrlToSupabase, uploadImageToCloudinary} from '@/components/apis/Apis';
 import useSupabaseClient from "@/lib/supabase/client";
-import { usePathname } from 'next/navigation'
+import {usePathname} from 'next/navigation'
 
-const BASE_URL = "https://a9f0-3-77-193-98.ngrok-free.app";
+const BASE_URL = process.env.NEXT_PUBLIC_MAIN_BACKEND_URL;
 
-export default function Create({user}) {
+export default function Create({user}: { user: any }) {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState<string>('');
     const [selectedModel, setSelectedModel] = useState<string>('sd-getai');
@@ -25,8 +25,9 @@ export default function Create({user}) {
     const [selectedTab, setSelectedTab] = useState<string>('Design');
     const [brushSize, setBrushSize] = useState<number>(5);
     const [tool, setTool] = useState<string>('brush');
+    const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
 
-    const [dimensions, setDimensions] = useState({ width: 1024, height: 1024, linkDimensions: true });
+    const [dimensions, setDimensions] = useState({width: 1024, height: 1024, linkDimensions: true});
 
     const canvasRef = useRef<any>(null);
 
@@ -38,7 +39,7 @@ export default function Create({user}) {
 
     useEffect(() => {
         const fetchFiles = async () => {
-            const { data, error } = await supabase.from('images').select('*').eq("ref" , true);
+            const {data, error} = await supabase.from('images').select('*').eq("ref", true);
             if (error) {
                 console.error('Error fetching files from Supabase', error);
             } else {
@@ -60,26 +61,80 @@ export default function Create({user}) {
             if (url) {
                 setUploadedImageUrl(url);
                 const data = await saveUrlToSupabase(supabase, 'images', url, user.id, true, 'ref');
-                setFiles([...files, ...data]);
+                if (Array.isArray(data)) { // Ensure data is an array before spreading
+                    setFiles([...files, ...data]);
+                }
             }
         }
     };
 
     const handleGenerateImage = async () => {
+        setIsLoading(true); // Start loading state
         console.log("Generating image with input:", inputValue);
 
-        if (mode === 'Edit (Inpaint/Outpaint)') {
-            console.log("Generating image with Inpaint and Outpaint");
-            const maskDataUrl = canvasRef.current ? canvasRef.current.getCanvasDataUrl() : '';
-            console.log("maskDataUrl", maskDataUrl);
-            const maskUrl = await uploadImageToCloudinary(maskDataUrl);
-            console.log("maskUrl", maskUrl);
-            if (maskUrl) {
-                await saveUrlToSupabase(supabase, 'images', maskUrl, user.id, false, 'mask');
+        try {
+            if (mode === 'Edit (Inpaint/Outpaint)') {
+                console.log("Generating image with Inpaint and Outpaint");
+                const maskDataUrl = canvasRef.current ? canvasRef.current.getCanvasDataUrl() : '';
+                console.log("maskDataUrl", maskDataUrl);
+                const maskUrl = await uploadImageToCloudinary(maskDataUrl);
+                console.log("maskUrl", maskUrl);
+                if (maskUrl) {
+                    await saveUrlToSupabase(supabase, 'images', maskUrl, user.id, false, 'mask');
 
-                const data = await generateImage(`${BASE_URL}/inpaintAndOutpaint`, {
-                    file1: imageUrl,
-                    file2: maskUrl,
+                    const data = await generateImage(`${BASE_URL}/inpaintAndOutpaint`, {
+                        file1: imageUrl,
+                        file2: maskUrl,
+                        prompt: inputValue,
+                        sharpness: '5',
+                        cn_type1: 'ImagePrompt',
+                        base_model_name: 'model_name',
+                        style_selections: 'style',
+                        performance_selection: 'performance',
+                        image_number: '1',
+                        negative_prompt: '',
+                        image_strength: '0.8',
+                        cfg_scale: '7',
+                        samples: '1',
+                        steps: '50',
+                        init_image_mode: 'IMAGE_STRENGTH',
+                        clip_guidance_preset: 'FAST_BLUE',
+                        mask_source: 'MASK_IMAGE',
+                        model_id: selectedModel,
+                        user_id: user.id
+                    });
+                    console.log("Generating image with Inpaint and Outpaint successful");
+
+                    if (data && data[0]) {
+                        const generatedImageUrl = data[0].url;
+                        setImageUrl(generatedImageUrl);
+
+                        console.log("Generated image URL:", generatedImageUrl);
+                        if (generatedImageUrl) {
+                            const {data, error} = await supabase
+                                .from('messages')
+                                .insert([{
+                                    session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
+                                    input_img_id: imageUrl, ref_img_id: maskUrl, model_id: selectedModel
+                                }])
+                                .select();
+
+                            if (error) {
+                                console.error(`Error saving the message to Supabase`, error);
+                                return null;
+                            } else {
+                                console.log(`Message saved to Supabase`, data);
+                                return data;
+                            }
+                        }
+                    }
+                }
+            } else if (mode === 'Text and Image to Image' && selectedImage) {
+                console.log("Generating image with Text and Image");
+                const data = await generateImage(`${BASE_URL}/textAndImageToImage`, {
+                    model_id: selectedModel,
+                    user_id: user.id,
+                    image_url: selectedImage.url,
                     prompt: inputValue,
                     sharpness: '5',
                     cn_type1: 'ImagePrompt',
@@ -92,14 +147,10 @@ export default function Create({user}) {
                     cfg_scale: '7',
                     samples: '1',
                     steps: '50',
-                    init_image_mode: 'IMAGE_STRENGTH',
-                    clip_guidance_preset: 'FAST_BLUE',
-                    mask_source: 'MASK_IMAGE',
-                    model_id: selectedModel,
-                    user_id: user.id
+                    init_image_mode: 'IMAGE_STRENGTH'
                 });
-                console.log("Generating image with Inpaint and Outpaint successful");
 
+                console.log("data", data);
                 if (data && data[0]) {
                     const generatedImageUrl = data[0].url;
                     setImageUrl(generatedImageUrl);
@@ -108,8 +159,42 @@ export default function Create({user}) {
                     if (generatedImageUrl) {
                         const {data, error} = await supabase
                             .from('messages')
-                            .insert([{session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
-                                input_img_id: imageUrl, ref_img_id: maskUrl, model_id: selectedModel}])
+                            .insert([{
+                                session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
+                                input_img_id: imageUrl, ref_img_id: selectedImage.url, model_id: selectedModel
+                            }])
+                            .select();
+
+                        if (error) {
+                            console.error(`Error saving the message to Supabase`, error);
+                            return null;
+                        } else {
+                            console.log(`Message saved to Supabase`, data);
+                            return data;
+                        }
+                    }
+                }
+            } else {
+                console.log("Generating image with Text", inputValue, selectedModel, user.id);
+                const data = await generateImage(`${BASE_URL}/textToImage`, {
+                    model_id: selectedModel,
+                    input: {prompt: inputValue},
+                    user_id: user.id
+                });
+
+                console.log("data", data);
+                if (data && data[0]) {
+                    const generatedImageUrl = data[0].url;
+                    setImageUrl(generatedImageUrl);
+
+                    console.log("Generated image URL:", generatedImageUrl);
+                    if (generatedImageUrl) {
+                        const {data, error} = await supabase
+                            .from('messages')
+                            .insert([{
+                                session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
+                                model_id: selectedModel
+                            }])
                             .select();
 
                         if (error) {
@@ -122,85 +207,16 @@ export default function Create({user}) {
                     }
                 }
             }
-        } else if (mode === 'Text and Image to Image' && selectedImage) {
-            console.log("Generating image with Text and Image");
-            const data = await generateImage(`${BASE_URL}/textAndImageToImage`, {
-                model_id: selectedModel,
-                user_id: user.id,
-                image_url: selectedImage.url,
-                prompt: inputValue,
-                sharpness: '5',
-                cn_type1: 'ImagePrompt',
-                base_model_name: 'model_name',
-                style_selections: 'style',
-                performance_selection: 'performance',
-                image_number: '1',
-                negative_prompt: '',
-                image_strength: '0.8',
-                cfg_scale: '7',
-                samples: '1',
-                steps: '50',
-                init_image_mode: 'IMAGE_STRENGTH'
-            });
-
-            console.log("data", data);
-            if (data && data[0]) {
-                const generatedImageUrl = data[0].url;
-                setImageUrl(generatedImageUrl);
-
-                console.log("Generated image URL:", generatedImageUrl);
-                if (generatedImageUrl) {
-                    const {data, error} = await supabase
-                        .from('messages')
-                        .insert([{session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
-                            input_img_id: imageUrl, ref_img_id: selectedImage.url, model_id: selectedModel}])
-                        .select();
-
-                    if (error) {
-                        console.error(`Error saving the message to Supabase`, error);
-                        return null;
-                    } else {
-                        console.log(`Message saved to Supabase`, data);
-                        return data;
-                    }
-                }
-            }
-        } else {
-            console.log("Generating image with Text", inputValue, selectedModel, user.id);
-            const data = await generateImage(`${BASE_URL}/textToImage`, {
-                model_id: selectedModel,
-                input: { prompt: inputValue },
-                user_id: user.id
-            });
-
-            console.log("data", data);
-            if (data && data[0]) {
-                const generatedImageUrl = data[0].url;
-                setImageUrl(generatedImageUrl);
-
-                console.log("Generated image URL:", generatedImageUrl);
-                if (generatedImageUrl) {
-                    const {data, error} = await supabase
-                        .from('messages')
-                        .insert([{session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
-                            model_id: selectedModel}])
-                        .select();
-
-                    if (error) {
-                        console.error(`Error saving the message to Supabase`, error);
-                        return null;
-                    } else {
-                        console.log(`Message saved to Supabase`, data);
-                        return data;
-                    }
-                }
-            }
+        } catch (error) {
+            console.error('Error generating image:', error);
+        } finally {
+            setIsLoading(false); // End loading state
         }
     };
 
     return (
         <div className="min-h-screen flex flex-col">
-            <NavBar selectedTab={selectedTab} onSelectTab={setSelectedTab} />
+            <NavBar selectedTab={selectedTab} onSelectTab={setSelectedTab}/>
             <div className="flex flex-1 mt-12">
                 <Toolbar
                     mode={selectedTab}
@@ -238,6 +254,7 @@ export default function Create({user}) {
                         onInputChange={(e) => setInputValue(e.target.value)}
                         onGenerateImage={handleGenerateImage}
                         onModeChange={(e) => setMode(e.target.value)}
+                        isLoading={isLoading} // Pass loading state
                     />
                 </div>
             </div>
@@ -251,7 +268,7 @@ export default function Create({user}) {
                                     setSelectedImage(file);
                                     setShowModal(false);
                                 }}>
-                                    <img src={file.url} alt={file.id} className="w-full rounded" />
+                                    <img src={file.url} alt={file.id} className="w-full rounded"/>
                                 </div>
                             ))}
                         </div>
@@ -266,4 +283,4 @@ export default function Create({user}) {
             )}
         </div>
     );
-};
+}

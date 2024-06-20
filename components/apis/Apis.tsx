@@ -1,3 +1,5 @@
+import {SupabaseClient} from '@supabase/supabase-js';
+
 export const uploadImageToCloudinary = async (image: string | File, preset: string = 'fr2fxnpz') => {
     const formData = new FormData();
     formData.append('file', image);
@@ -17,7 +19,9 @@ export const uploadImageToCloudinary = async (image: string | File, preset: stri
     }
 };
 
-export const saveUrlToSupabase = async (supabase, table: string, url: string, user, ref:boolean, type:string) => {
+export const saveUrlToSupabase = async (supabase: SupabaseClient, table: string, url: string, user: {
+    user: any
+}, ref: boolean, type: string) => {
     console.log("user", user);
     const {data, error} = await supabase
         .from(table)
@@ -57,30 +61,30 @@ export const generateImage = async (url: string, payload: object) => {
 };
 
 
-// New function to optimize the text prompt
-export const optimizeTextPrompt = async (existingPrompt: string, newUserInputPrompt: string) => {
-    try {
-        const payload = {
-            existing_prompt: existingPrompt,
-            new_user_input_prompt: newUserInputPrompt,
-        };
-
-        const response = await fetch('http://localhost:8001/optimize_text_prompt', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(payload),
-        });
-
-        if (response.ok) {
-            return await response.json();
-        } else {
-            console.error('Failed to optimize text prompt:', response.statusText);
-            return null;
-        }
-    } catch (error) {
-        console.error('Error optimizing text prompt:', error);
-        return null;
-    }
-};
+// // New function to optimize the text prompt
+// export const optimizeTextPrompt = async (existingPrompt: string, newUserInputPrompt: string) => {
+//     try {
+//         const payload = {
+//             existing_prompt: existingPrompt,
+//             new_user_input_prompt: newUserInputPrompt,
+//         };
+//
+//         const response = await fetch('http://localhost:8001/optimize_text_prompt', {
+//             method: 'POST',
+//             headers: {
+//                 'Content-Type': 'application/json',
+//             },
+//             body: JSON.stringify(payload),
+//         });
+//
+//         if (response.ok) {
+//             return await response.json();
+//         } else {
+//             console.error('Failed to optimize text prompt:', response.statusText);
+//             return null;
+//         }
+//     } catch (error) {
+//         console.error('Error optimizing text prompt:', error);
+//         return null;
+//     }
+// };

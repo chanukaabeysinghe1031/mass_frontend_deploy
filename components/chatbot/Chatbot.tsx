@@ -1,5 +1,3 @@
-// components/chatbot/Chatbot.tsx
-
 import { useState } from 'react';
 
 interface ChatbotProps {
@@ -33,7 +31,7 @@ const Chatbot: React.FC<ChatbotProps> = ({ imageUrl, refImageUrl, userId, modelI
 
         try {
             console.log('Chatbot input:', JSON.parse(requestBody));
-            const response = await fetch('http://localhost:8001/generate_image', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_NLP_BACKEND_URL}/generate_image`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

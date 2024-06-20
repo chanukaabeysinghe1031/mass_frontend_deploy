@@ -9,6 +9,7 @@ interface InputSectionProps {
     onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onGenerateImage: () => void;
     onModeChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+    isLoading: boolean; // Add isLoading prop
 }
 
 interface Model {
@@ -24,6 +25,7 @@ const InputSection: React.FC<InputSectionProps> = ({
                                                        onInputChange,
                                                        onGenerateImage,
                                                        onModeChange,
+                                                       isLoading, // Add isLoading prop
                                                    }) => {
     const [models, setModels] = useState<Model[]>([]);
     const [optimizationInput, setOptimizationInput] = useState<string>('');
@@ -50,7 +52,7 @@ const InputSection: React.FC<InputSectionProps> = ({
                 new_user_input_prompt: optimizationInput,
             };
 
-            const response = await fetch('http://localhost:8001/optimize_text_prompt', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_NLP_BACKEND_URL}/optimize_text_prompt`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -105,13 +107,6 @@ const InputSection: React.FC<InputSectionProps> = ({
                 className="border rounded px-4 py-2 w-full mb-2"
                 placeholder="Enter input for image generation"
             />
-            {/*<input*/}
-            {/*    type="text"*/}
-            {/*    value={optimizationInput}*/}
-            {/*    onChange={(e) => setOptimizationInput(e.target.value)}*/}
-            {/*    className="border rounded px-4 py-2 w-full mb-2"*/}
-            {/*    placeholder="Enter input for optimization"*/}
-            {/*/>*/}
             <button
                 onClick={handleOptimization}
                 className="w-full bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-600 transition-colors mb-2"
@@ -133,8 +128,9 @@ const InputSection: React.FC<InputSectionProps> = ({
             <button
                 onClick={onGenerateImage}
                 className="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 transition-colors"
+                disabled={isLoading} // Disable button while loading
             >
-                Generate Image
+                {isLoading ? 'Generating...' : 'Generate Image'} {/* Change button text while loading */}
             </button>
         </div>
     );

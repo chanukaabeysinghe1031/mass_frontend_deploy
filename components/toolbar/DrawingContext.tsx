@@ -156,4 +156,6 @@ const DrawingCanvas = forwardRef(({ imageUrl, brushSize, tool }: DrawingCanvasPr
     );
 });
 
+DrawingCanvas.displayName = 'DrawingCanvas';
+
 export default DrawingCanvas;

@@ -3,7 +3,12 @@ import {AdvancedImage} from '@cloudinary/react';
 import {Cloudinary} from '@cloudinary/url-gen';
 import {sepia} from '@cloudinary/url-gen/actions/effect';
 
-export default function History({model, setModel}) {
+interface HistoryProps {
+    model: string;
+    setModel: React.Dispatch<React.SetStateAction<string>>;
+}
+
+export default function History({ model, setModel }: HistoryProps) {
     const cld = new Cloudinary({
         cloud: {
             cloudName: 'det0mvsek'
@@ -13,11 +18,13 @@ export default function History({model, setModel}) {
     const myImage = cld.image('cld-sample-5');
     myImage.effect(sepia());
 
-    const [imageFile, setImageFile] = useState(null);
-    const [imageUrl, setImageUrl] = useState('');
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imageUrl, setImageUrl] = useState<string>('');
 
-    const handleFileChange = (e) => {
-        setImageFile(e.target.files[0]);
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setImageFile(e.target.files[0]);
+        }
     };
 
     const handleUpload = async () => {
@@ -42,8 +49,8 @@ export default function History({model, setModel}) {
 
     return (
         <div>
-            <AdvancedImage cldImg={myImage}/>
-            <input type="file" onChange={handleFileChange}/>
+            <AdvancedImage cldImg={myImage} />
+            <input type="file" onChange={handleFileChange} />
             <button onClick={handleUpload}>Upload Image</button>
             {imageUrl && <p>Image URL: {imageUrl}</p>}
         </div>
