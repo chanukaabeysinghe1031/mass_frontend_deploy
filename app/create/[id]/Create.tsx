@@ -10,7 +10,6 @@ import useSupabaseClient from "@/lib/supabase/client";
 import { usePathname } from 'next/navigation';
 import Modal from "@/app/create/[id]/Modal";
 
-
 const BASE_URL = process.env.NEXT_PUBLIC_MAIN_BACKEND_URL;
 
 export default function Create({ user }: { user: any }) {
@@ -232,72 +231,53 @@ export default function Create({ user }: { user: any }) {
         <div className="min-h-screen flex flex-col">
             <NavBar selectedTab={selectedTab} onSelectTab={setSelectedTab} />
             <div className="flex flex-1 mt-12">
-                <Toolbar
-                    mode={mode}
-                    selectedTab={selectedTab}
-                    imageUrl={imageUrl}
-                    onFileChange={handleFileChange}
-                    onUpload={handleUpload}
-                    uploadedImageUrl={uploadedImageUrl}
-                    onShowModal={() => setShowModal(true)}
-                    selectedImage={selectedImage}
-                    brushSize={brushSize}
-                    setBrushSize={setBrushSize}
-                    tool={tool}
-                    setTool={setTool}
-                    sessionID={session_id}
+                <Toolbar 
+                    setBrushSize={setBrushSize} 
+                    setTool={setTool} 
+                    setMode={setMode} 
+                    mode={mode} 
                     dimensions={dimensions}
                     setDimensions={setDimensions}
-                    user={user}
-                    selectedModel={selectedModel}
-                    setImageUrl={setImageUrl}
+                    imageDimensions={imageDimensions}
+                    setImageDimensions={setImageDimensions}
                 />
-                <div className="flex-1 flex flex-col">
-                    <div className="flex-1 flex justify-center items-center bg-gray-100 p-4">
-                        <DrawingCanvas
-                            imageUrl={imageUrl}
-                            brushSize={brushSize}
-                            tool={tool}
-                            imageDimensions={imageDimensions}
-                            setImageDimensions={setImageDimensions}
-                            ref={canvasRef}
-                        />
-                    </div>
-                    <InputSection
-                        mode={mode}
-                        selectedModel={selectedModel}
-                        inputValue={inputValue}
-                        onModelChange={(e) => setSelectedModel(e.target.value)}
-                        onInputChange={(e) => setInputValue(e.target.value)}
-                        onGenerateImage={handleGenerateImage}
-                        onModeChange={(e) => setMode(e.target.value)}
+                <div className="flex-1 p-6 flex flex-col items-center justify-center">
+                    {mode === 'Edit (Inpaint/Outpaint)' && <DrawingCanvas brushSize={brushSize} tool={tool} ref={canvasRef} />}
+                    {imageUrl && <img src={imageUrl} alt="Generated" className="w-full max-w-md h-auto" />}
+                    <InputSection 
+                        inputValue={inputValue} 
+                        setInputValue={setInputValue} 
+                        handleGenerateImage={handleGenerateImage}
                         isLoading={isLoading} // Pass loading state
                     />
                 </div>
             </div>
-            <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
-                <div className="grid grid-cols-3 gap-2"> {/* Change grid-cols-2 to grid-cols-3 */}
-                    {files.map((file) => (
-                        <div key={file.id} className="relative cursor-pointer">
-                            <button
-                                className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full focus:outline-none"
-                                onClick={() => handleDeleteImage(file.id)}
-                            >
-                                &#x2715;
-                            </button>
-                            <img
-                                src={file.url}
-                                alt={file.id}
-                                className="w-full rounded"
-                                onClick={() => {
+            <div className="p-6 flex flex-wrap">
+                {files.map(file => (
+                    <div key={file.id} className="relative m-2">
+                        <img
+                            src={file.url}
+                            alt={`File ${file.id}`}
+                            className="w-24 h-24 object-cover cursor-pointer"
+                            onClick={() => {
+                                if (mode === 'Text and Image to Image') {
                                     setSelectedImage(file);
-                                    setShowModal(false);
-                                }}
-                            />
-                        </div>
-                    ))}
-                </div>
-            </Modal>
+                                } else {
+                                    setImageUrl(file.url);
+                                }
+                                setShowModal(true);
+                            }}
+                        />
+                        <button
+                            onClick={() => handleDeleteImage(file.id)}
+                            className="absolute top-0 right-0 bg-red-500 text-white rounded-full p-1"
+                        >
+                            &times;
+                        </button>
+                    </div>
+                ))}
+            </div>
+            {showModal && <Modal image={selectedImage} onClose={() => setShowModal(false)} />}
         </div>
     );
 }
