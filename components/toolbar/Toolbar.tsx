@@ -11,6 +11,7 @@ interface Dimensions {
 
 interface ToolbarProps {
     mode: string;
+    selectedTab: string; // Add this line
     imageUrl: any;
     onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onUpload: () => void;
@@ -29,8 +30,10 @@ interface ToolbarProps {
     setImageUrl: React.Dispatch<React.SetStateAction<any>>;
 }
 
+
 const Toolbar: React.FC<ToolbarProps> = ({
                                              mode,
+                                            selectedTab,
                                              imageUrl,
                                              onFileChange,
                                              onUpload,
@@ -46,7 +49,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
                                              setDimensions,
                                              user,
                                              selectedModel,
-                                             setImageUrl
+                                             setImageUrl   
                                          }) => {
     const [messages, setMessages] = useState<any[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
