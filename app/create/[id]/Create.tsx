@@ -1,18 +1,19 @@
 'use client';
 
-import {useEffect, useRef, useState} from 'react';
-
+import { useEffect, useRef, useState } from 'react';
 import NavBar from '@/components/navbar/NavBar';
 import Toolbar from '@/components/toolbar/Toolbar';
 import InputSection from '@/components/input_section/InputSection';
 import DrawingCanvas from '@/components/toolbar/DrawingContext';
-import {generateImage, saveUrlToSupabase, uploadImageToCloudinary} from '@/components/apis/Apis';
+import { generateImage, saveUrlToSupabase, uploadImageToCloudinary } from '@/components/apis/Apis';
 import useSupabaseClient from "@/lib/supabase/client";
-import {usePathname} from 'next/navigation'
+import { usePathname } from 'next/navigation';
+import Modal from "@/app/create/[id]/Modal";
+
 
 const BASE_URL = process.env.NEXT_PUBLIC_MAIN_BACKEND_URL;
 
-export default function Create({user}: { user: any }) {
+export default function Create({ user }: { user: any }) {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [inputValue, setInputValue] = useState<string>('');
     const [selectedModel, setSelectedModel] = useState<string>('sd-getai');
@@ -21,25 +22,24 @@ export default function Create({user}: { user: any }) {
     const [files, setFiles] = useState<any[]>([]);
     const [selectedImage, setSelectedImage] = useState<any>(null);
     const [showModal, setShowModal] = useState<boolean>(false);
-    const [mode, setMode] = useState<string>('Text -> Image');
+    const [mode, setMode] = useState<string>('Text to Image'); // Text and Image to Image // Edit (Inpaint/Outpaint)
     const [selectedTab, setSelectedTab] = useState<string>('Design');
     const [brushSize, setBrushSize] = useState<number>(5);
     const [tool, setTool] = useState<string>('brush');
     const [isLoading, setIsLoading] = useState<boolean>(false); // Loading state
 
-    const [dimensions, setDimensions] = useState({width: 1024, height: 1024, linkDimensions: true});
+    const [dimensions, setDimensions] = useState({ width: 1024, height: 1024, linkDimensions: true });
+    const [imageDimensions, setImageDimensions] = useState({ width: 1024, height: 1024 });
 
     const canvasRef = useRef<any>(null);
 
     const supabase = useSupabaseClient();
-
-    const pathname = usePathname()
+    const pathname = usePathname();
     const session_id = pathname.split('/').pop() || '';
-
 
     useEffect(() => {
         const fetchFiles = async () => {
-            const {data, error} = await supabase.from('images').select('*').eq("ref", true);
+            const { data, error } = await supabase.from('images').select('*').eq("ref", true);
             if (error) {
                 console.error('Error fetching files from Supabase', error);
             } else {
@@ -111,7 +111,7 @@ export default function Create({user}: { user: any }) {
 
                         console.log("Generated image URL:", generatedImageUrl);
                         if (generatedImageUrl) {
-                            const {data, error} = await supabase
+                            const { data, error } = await supabase
                                 .from('messages')
                                 .insert([{
                                     session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
@@ -157,11 +157,12 @@ export default function Create({user}: { user: any }) {
 
                     console.log("Generated image URL:", generatedImageUrl);
                     if (generatedImageUrl) {
-                        const {data, error} = await supabase
+                        const { data, error } = await supabase
                             .from('messages')
                             .insert([{
                                 session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
-                                input_img_id: imageUrl, ref_img_id: selectedImage.url, model_id: selectedModel
+                                // input_img_id: imageUrl,
+                                ref_img_id: selectedImage.url, model_id: selectedModel
                             }])
                             .select();
 
@@ -178,7 +179,7 @@ export default function Create({user}: { user: any }) {
                 console.log("Generating image with Text", inputValue, selectedModel, user.id);
                 const data = await generateImage(`${BASE_URL}/textToImage`, {
                     model_id: selectedModel,
-                    input: {prompt: inputValue},
+                    input: { prompt: inputValue },
                     user_id: user.id
                 });
 
@@ -189,7 +190,7 @@ export default function Create({user}: { user: any }) {
 
                     console.log("Generated image URL:", generatedImageUrl);
                     if (generatedImageUrl) {
-                        const {data, error} = await supabase
+                        const { data, error } = await supabase
                             .from('messages')
                             .insert([{
                                 session_id: session_id, text: inputValue, type: mode, gen_img_id: generatedImageUrl,
@@ -214,12 +215,26 @@ export default function Create({user}: { user: any }) {
         }
     };
 
+    const handleDeleteImage = async (fileId: string) => {
+        try {
+            const { error } = await supabase.from('images').delete().eq('id', fileId);
+            if (error) {
+                console.error('Error deleting file from Supabase', error);
+            } else {
+                setFiles(files.filter(file => file.id !== fileId));
+            }
+        } catch (error) {
+            console.error('Error deleting file:', error);
+        }
+    };
+
     return (
         <div className="min-h-screen flex flex-col">
-            <NavBar selectedTab={selectedTab} onSelectTab={setSelectedTab}/>
+            <NavBar selectedTab={selectedTab} onSelectTab={setSelectedTab} />
             <div className="flex flex-1 mt-12">
                 <Toolbar
-                    mode={selectedTab}
+                    mode={mode}
+                    selectedTab={selectedTab}
                     imageUrl={imageUrl}
                     onFileChange={handleFileChange}
                     onUpload={handleUpload}
@@ -243,6 +258,8 @@ export default function Create({user}: { user: any }) {
                             imageUrl={imageUrl}
                             brushSize={brushSize}
                             tool={tool}
+                            imageDimensions={imageDimensions}
+                            setImageDimensions={setImageDimensions}
                             ref={canvasRef}
                         />
                     </div>
@@ -258,29 +275,29 @@ export default function Create({user}: { user: any }) {
                     />
                 </div>
             </div>
-            {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-                    <div className="bg-white p-4 rounded shadow-lg max-w-lg w-full">
-                        <h2 className="text-xl font-bold mb-4">Select an Image</h2>
-                        <div className="grid grid-cols-2 gap-2">
-                            {files.map((file) => (
-                                <div key={file.id} className="cursor-pointer" onClick={() => {
+            <Modal isOpen={showModal} onClose={() => setShowModal(false)}>
+                <div className="grid grid-cols-3 gap-2"> {/* Change grid-cols-2 to grid-cols-3 */}
+                    {files.map((file) => (
+                        <div key={file.id} className="relative cursor-pointer">
+                            <button
+                                className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full focus:outline-none"
+                                onClick={() => handleDeleteImage(file.id)}
+                            >
+                                &#x2715;
+                            </button>
+                            <img
+                                src={file.url}
+                                alt={file.id}
+                                className="w-full rounded"
+                                onClick={() => {
                                     setSelectedImage(file);
                                     setShowModal(false);
-                                }}>
-                                    <img src={file.url} alt={file.id} className="w-full rounded"/>
-                                </div>
-                            ))}
+                                }}
+                            />
                         </div>
-                        <button
-                            onClick={() => setShowModal(false)}
-                            className="mt-4 w-full bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600 transition-colors"
-                        >
-                            Close
-                        </button>
-                    </div>
+                    ))}
                 </div>
-            )}
+            </Modal>
         </div>
     );
 }
